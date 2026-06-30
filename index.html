@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Tag Top 5 Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f7f6;
+    padding: 20px;
+}
+
+h2 { color: #0b5d3b; }
+
+.box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background: #0b5d3b;
+    color: white;
+}
+
+.tag-title {
+    font-weight: bold;
+    text-align: left;
+}
+</style>
+</head>
+
+<body>
+
+<h2>TOP 5 TAG DASHBOARD</h2>
+
+<div class="box">
+    <input type="file" id="fileInput" />
+</div>
+
+<div class="box">
+    <h3>TOP 5 OVERALL TAGS</h3>
+    <table id="topTable"></table>
+</div>
+
+<div class="box">
+    <h3>BY BRAND</h3>
+    <div id="brandTables"></div>
+</div>
+
+<script>
+
+document.getElementById('fileInput').addEventListener('change', handleFile);
+
+function handleFile(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, {type:'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet);
+
+        processData(json);
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+function processData(data) {
+
+    let tagCount = {};
+    let brandData = {};
+
+    data.forEach(row => {
+        const tag = row["Tags"];
+        const brand = row["Brand"];
+
+        if (!tag) return;
+
+        // global count
+        tagCount[tag] = (tagCount[tag] || 0) + 1;
+
+        // brand count
+        if (!brandData[brand]) brandData[brand] = {};
+        brandData[brand][tag] = (brandData[brand][tag] || 0) + 1;
+    });
+
+    renderTop5(tagCount);
+    renderBrand(brandData);
+}
+
+function renderTop5(tagCount) {
+
+    let sorted = Object.entries(tagCount)
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0,5);
+
+    let html = `<tr><th>Rank</th><th>Tag Name</th><th>Total</th></tr>`;
+
+    sorted.forEach((t,i)=>{
+        html += `<tr>
+            <td>${i+1}</td>
+            <td class="tag-title">${t[0]}</td>
+            <td>${t[1]}</td>
+        </tr>`;
+    });
+
+    document.getElementById("topTable").innerHTML = html;
+}
+
+function renderBrand(brandData) {
+
+    let container = document.getElementById("brandTables");
+    container.innerHTML = "";
+
+    Object.keys(brandData).forEach(brand => {
+
+        let sorted = Object.entries(brandData[brand])
+            .sort((a,b)=>b[1]-a[1])
+            .slice(0,5);
+
+        let html = `<h4>${brand}</h4>`;
+        html += `<table><tr><th>Rank</th><th>Tag</th><th>Total</th></tr>`;
+
+        sorted.forEach((t,i)=>{
+            html += `<tr>
+                <td>${i+1}</td>
+                <td>${t[0]}</td>
+                <td>${t[1]}</td>
+            </tr>`;
+        });
+
+        html += `</table><br/>`;
+
+        container.innerHTML += html;
+    });
+}
+
+</script>
+
+</body>
+</html>
